@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TravelWise</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; font-family: Inter, system-ui, Arial, sans-serif; background:#0b1020; color:#eef2ff; }
+    .wrap { width:min(980px, 94%); margin:0 auto; padding:28px 0; }
+    .hero { padding:24px; border:1px solid #26304a; border-radius:22px; background:#11182b; margin-bottom:18px; }
+    h1 { margin:0 0 6px; font-size:clamp(28px,5vw,46px); }
+    .sub { color:#aeb9d4; margin:0; }
+    .chat { height:58vh; min-height:420px; overflow:auto; padding:18px; border:1px solid #26304a; border-radius:22px; background:#0e1527; }
+    .msg { display:flex; margin:12px 0; }
+    .msg.user { justify-content:flex-end; }
+    .bubble { max-width:82%; padding:12px 15px; border-radius:16px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .user .bubble { background:#304a8a; }
+    .bot .bubble { background:#18233b; border:1px solid #293752; }
+    form { display:flex; gap:10px; margin-top:14px; }
+    input { flex:1; padding:14px 16px; border-radius:14px; border:1px solid #33415f; background:#10182b; color:#fff; outline:none; font-size:16px; }
+    button { border:0; border-radius:14px; padding:0 20px; font-weight:700; cursor:pointer; background:#7c9cff; color:#071020; }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    .status { color:#8f9bb5; font-size:13px; margin-top:9px; min-height:18px; }
+    .examples { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+    .example { padding:8px 11px; border:1px solid #33415f; border-radius:999px; background:#121c31; color:#c9d4ed; cursor:pointer; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <h1>TravelWise</h1>
+    <p class="sub">Your AI assistant for Travel.</p>
+    <div class="examples">
+      <button class="example" type="button" onclick="askExample(this)">Give me a beginner overview</button>
+      <button class="example" type="button" onclick="askExample(this)">What are the most important concepts?</button>
+      <button class="example" type="button" onclick="askExample(this)">Explain it simply</button>
+    </div>
+  </section>
+
+  <section id="chat" class="chat">
+    <div class="msg bot"><div class="bubble">Hi! I’m TravelWise. Ask me anything related to Travel.</div></div>
+  </section>
+
+  <form id="form">
+    <input id="message" autocomplete="off" placeholder="Ask a Travel question..." maxlength="4000" required>
+    <button id="send" type="submit">Send</button>
+  </form>
+  <div id="status" class="status"></div>
+</div>
+
+<script>
+const form = document.getElementById("form");
+const input = document.getElementById("message");
+const chat = document.getElementById("chat");
+const send = document.getElementById("send");
+const statusEl = document.getElementById("status");
+
+function addMessage(text, who) {
+  const row = document.createElement("div");
+  row.className = "msg " + who;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendMessage(text) {
+  if (!text.trim()) return;
+  addMessage(text.trim(), "user");
+  input.value = "";
+  send.disabled = true;
+  statusEl.textContent = "Thinking...";
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({message: text.trim()})
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Request failed");
+    addMessage(data.reply, "bot");
+  } catch (err) {
+    addMessage("Sorry, something went wrong. " + err.message, "bot");
+  } finally {
+    send.disabled = false;
+    statusEl.textContent = "";
+    input.focus();
+  }
+}
+
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  sendMessage(input.value);
+});
+
+function askExample(btn) {
+  sendMessage(btn.textContent);
+}
+</script>
+</body>
+</html>
